@@ -45,6 +45,44 @@ mount /mnt/efs
 # If we don't have one already, make a directory to hold config status
 [ -d /mnt/efs/config_status ] || mkdir /mnt/efs/config_status
 
+#
+# DNS DELEGATION
+#
+
+# This is a really simple check: Query for a SOA record for the domain.  If
+# delegation isn't already done, then nothing will be returned, or we will get
+# a timeout message.
+DNS_NAMESERVERS=$(aws route53 get-hosted-zone --id ${DNS_ZONE_ID} | jq .DelegationSet.NameServers)
+echo "DNS domain $DNS_ZONE_NAME has zone ID $DNS_ZONE_ID"
+DNS_DELEGATION_DONE=$(dig +recurse +short ${DNS_ZONE_NAME} soa | grep amazon | wc -l | sed 's/ //g')
+if [ ${DNS_DELEGATION_DONE} -eq '0' ]; then
+    echo 'DNS Delegation incomplete!'
+    cat <<EOF > /tmp/dns_mail.txt
+Hello!
+
+This is the bootstrap system at ${PUBLIC_FQDN} (${PRIVATE_FQDN}).
+
+We have detected that delegation for the zone ${DNS_ZONE_NAME} is NOT complete.
+
+Please go to your upstream DNS or registrar, and set the following as name
+servers for your zone:
+
+${DNS_NAMESERVERS}
+
+Until you do this, you will not be able to use your Puppet services.
+
+You can confirm things are working by SSHing to the server
+"bootstrap.${DNS_ZONE_NAME}", which (if delegation is working) will connect you
+to the system which sent this email.
+
+Thanks very much!
+EOF
+    mailx --return-address="root@${PUBLIC_FQDN}" --subject='DNS Delegation Required' "${ADMIN_EMAIL}" < /tmp/dns_mail.txt
+    rm /tmp/dns_mail.txt
+else
+    echo 'DNS delegation looks good'
+fi
+
 # All done!
 touch /tmp/bootstrap-complete
 exit 0
