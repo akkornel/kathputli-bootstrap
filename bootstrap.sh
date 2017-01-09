@@ -31,11 +31,14 @@ service postfix restart
 . /etc/kathputli-bootstrap.sh
 DNS_ZONE_NAME_NO_END_DOT=$(echo ${DNS_ZONE_NAME} | sed 's/\.$//')
 
-# Mount our bootstrap data EFS
+#
+# MOUNT NFS
+#
+
 mkdir /mnt/efs
-EFS_ID=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --region $AWS_REGION | jq '.Reservations[0].Instances[0].Tags[] | select(.Key | contains("NFS")) | .Value' | sed 's/"//g')
-echo "EFS ID is $EFS_ID"
-echo "${EFS_ID}.efs.${AWS_REGION}.amazonaws.com:/ /mnt/efs nfs nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 1" >> /etc/fstab
+
+# Check if we already have the mount defined
+grep -q /mnt/efs /etc/fstab || echo "${EFS_ID}.efs.${AWS_REGION}.amazonaws.com:/ /mnt/efs nfs nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 1" >> /etc/fstab
 echo "Mounting EFS..."
 mount /mnt/efs
 
