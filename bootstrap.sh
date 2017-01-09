@@ -11,6 +11,7 @@ exec 1>/tmp/bootstrap.log 2>&1
 # * nfs-common is to mount EFS
 DEBIAN_FRONTEND=noninteractive apt-get install -y awscli dnsutils jq nfs-common
 
+# Get basic instance ID and location
 INSTANCE_ID=$(curl -s http://169.254.169.254/2014-02-25/meta-data/instance-id)
 AWS_AZ=$(curl -s http://169.254.169.254/2014-02-25/meta-data/placement/availability-zone)
 AWS_REGION=$(echo $AWS_AZ | sed 's/[a-z]$//')
