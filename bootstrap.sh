@@ -84,6 +84,56 @@ else
 fi
 
 #
+# BOOTSTRAP CNAME RECORD CONFIGURATION
+#
+
+if [ $(aws route53 list-resource-record-sets --hosted-zone-id ${DNS_ZONE_ID} --no-paginate --query "ResourceRecordSets[?Name == 'bootstrap.${DNS_ZONE_NAME}']" | wc -l | sed 's/ //') -ne '1' ]; then
+# TODO: Remove any existing DNS entries
+    cat > /tmp/bootstrap_cleanup.json <<EOS
+{
+"Comment": "Add SES verification token to domain",
+"Changes": [
+{
+  "Action": "DELETE",
+  "ResourceRecordSet": {
+    "Name": "bootstrap.${DNS_ZONE_NAME}",
+    "Type": "CNAME",
+    "TTL": 60,
+    "ResourceRecords": [{
+      "Value": "${PUBLIC_FQDN}"
+    }
+    ]
+  }
+}
+]
+}
+EOS
+#aws route53 change-resource-record-sets --hosted-zone-id ${DNS_ZONE_ID} --change-batch file:///tmp/bootstrap_cleanup.json
+rm /tmp/bootstrap_clenaup.json
+fi
+cat > /tmp/bootstrap_cname_route53.json <<EOS
+{
+"Comment": "Add SES verification token to domain",
+"Changes": [
+{
+  "Action": "CREATE",
+  "ResourceRecordSet": {
+    "Name": "bootstrap.${DNS_ZONE_NAME}",
+    "Type": "CNAME",
+    "TTL": 60,
+    "ResourceRecords": [{
+      "Value": "${PUBLIC_FQDN}"
+    }
+    ]
+  }
+}
+]
+}
+EOS
+aws route53 change-resource-record-sets --hosted-zone-id ${DNS_ZONE_ID} --change-batch file:///tmp/bootstrap_cname_route53.json
+rm /tmp/bootstrap_cname_route53.json
+
+#
 # SES CONFIGURATION
 #
 
