@@ -83,6 +83,47 @@ else
     echo 'DNS delegation looks good'
 fi
 
+#
+# SES CONFIGURATION
+#
+
+# SES configuration involves getting a verification token for the domain, and
+# then adding it to Route53.
+configure_ses () {
+    SES_TOKEN_QUOTED_QUOTES=$(echo ${SES_TOKEN} | sed 's/"/\\"/g')
+    SES_TOKEN=$(aws ses verify-domain-identity --region ${AWS_REGION} --domain ${DNS_ZONE_NAME_NO_END_DOT} | jq .VerificationToken)
+    cat > /tmp/ses_route53.json <<EOS
+{
+"Comment": "Add SES verification token to domain",
+"Changes": [
+{
+  "Action": "CREATE",
+  "ResourceRecordSet": {
+    "Name": "${DNS_ZONE_NAME}",
+    "Type": "TXT",
+    "TTL": 1800,
+    "ResourceRecords": [{
+      "Value": "${SES_TOKEN_QUOTED_QUOTES}"
+    }
+    ]
+  }
+}
+]
+}
+EOS
+    return aws route53 change-resource-record-sets --hosted-zone-id ${DNS_ZONE_ID} --change-batch file:///tmp/ses_route53.json
+}
+
+SES_VALIDATION_DONE=$(dig +recurse +short ${DNS_ZONE_NAME} txt | grep -i -v timeout | wc -l | sed 's/ //g')
+if [ ${SES_VALIDATION_DONE} -eq '0' ]; then
+    echo 'Doing SES configuration...'
+    configure_ses()
+    sleep 30
+    echo 'SES configuration complete!'
+else
+    echo 'SES configuration already active'
+fi
+
 # All done!
 touch /tmp/bootstrap-complete
 exit 0
