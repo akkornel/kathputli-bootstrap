@@ -7,13 +7,21 @@ exec 1>/tmp/bootstrap.log 2>&1
 # * awscli is for lots of stuff
 # * dnsutils is for dig
 # * jq is for processing awscli output
+# * mailutils is for sending email before SES is working (install later)
 # * nfs-common is to mount EFS
 DEBIAN_FRONTEND=noninteractive apt-get install -y awscli dnsutils jq nfs-common
 
 INSTANCE_ID=$(curl -s http://169.254.169.254/2014-02-25/meta-data/instance-id)
 AWS_AZ=$(curl -s http://169.254.169.254/2014-02-25/meta-data/placement/availability-zone)
 AWS_REGION=$(echo $AWS_AZ | sed 's/[a-z]$//')
-echo "Identified instance ID $INSTANCE_ID, in AZ $AWS_AZ (region $AWS_REGION)"
+PRIVATE_FQDN=$(curl -s http://169.254.169.254/2016-09-02/meta-data/local-hostname)
+PUBLIC_FQDN=$(curl -s http://169.254.169.254/2016-09-02/meta-data/public-hostname)
+echo "Identified that $PUBLIC_FQDN instance ID $INSTANCE_ID, in AZ $AWS_AZ (region $AWS_REGION)"
+
+
+# Get other info from the config file written by user-data
+. /etc/kathputli-bootstrap.sh
+DNS_ZONE_NAME_NO_END_DOT=$(echo ${DNS_ZONE_NAME} | sed 's/\.$//')
 
 # Mount our bootstrap data EFS
 mkdir /mnt/efs
