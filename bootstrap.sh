@@ -19,6 +19,13 @@ PRIVATE_FQDN=$(curl -s http://169.254.169.254/2016-09-02/meta-data/local-hostnam
 PUBLIC_FQDN=$(curl -s http://169.254.169.254/2016-09-02/meta-data/public-hostname)
 echo "Identified that $PUBLIC_FQDN instance ID $INSTANCE_ID, in AZ $AWS_AZ (region $AWS_REGION)"
 
+# Install mailutils, including some Postfix configuration
+echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
+echo "postfix postfix/mailname string ${PUBLIC_FQDN}" | debconf-set-selections
+DEBIAN_FRONTEND=noninteractive apt-get install -y mailutils
+sed -i "s/ = ${PRIVATE_FQDN}/ = ${PUBLIC_FQDN}/" /etc/postfix/main.cf
+service postfix restart
+
 
 # Get other info from the config file written by user-data
 . /etc/kathputli-bootstrap.sh
