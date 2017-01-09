@@ -42,6 +42,9 @@ grep -q /mnt/efs /etc/fstab || echo "${EFS_ID}.efs.${AWS_REGION}.amazonaws.com:/
 echo "Mounting EFS..."
 mount /mnt/efs
 
+# If we don't have one already, make a directory to hold config status
+[ -d /mnt/efs/config_status ] || mkdir /mnt/efs/config_status
+
 # All done!
 touch /tmp/bootstrap-complete
 exit 0
