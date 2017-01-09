@@ -5,9 +5,10 @@ exec 1>/tmp/bootstrap.log 2>&1
 
 # Install packages
 # * awscli is for lots of stuff
+# * dnsutils is for dig
 # * jq is for processing awscli output
 # * nfs-common is to mount EFS
-DEBIAN_FRONTEND=noninteractive apt-get install -y awscli jq nfs-common
+DEBIAN_FRONTEND=noninteractive apt-get install -y awscli dnsutils jq nfs-common
 
 INSTANCE_ID=$(curl -s http://169.254.169.254/2014-02-25/meta-data/instance-id)
 AWS_AZ=$(curl -s http://169.254.169.254/2014-02-25/meta-data/placement/availability-zone)
