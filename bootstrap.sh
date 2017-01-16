@@ -167,7 +167,7 @@ EOS
 SES_VALIDATION_DONE=$(dig +recurse +short ${DNS_ZONE_NAME} txt | grep -i -v timeout | wc -l | sed 's/ //g')
 if [ ${SES_VALIDATION_DONE} -eq '0' ]; then
     echo 'Doing SES configuration...'
-    configure_ses()
+    configure_ses
     sleep 30
     echo 'SES configuration complete!'
 else
