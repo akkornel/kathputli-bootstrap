@@ -9,6 +9,7 @@ exec 1>/tmp/bootstrap.log 2>&1
 # * jq is for processing awscli output
 # * mailutils is for sending email before SES is working (install later)
 # * nfs-common is to mount EFS
+echo 'Installing packages for bootstrap'
 DEBIAN_FRONTEND=noninteractive apt-get install -y awscli dnsutils jq nfs-common
 
 # Get basic instance ID and location
@@ -17,9 +18,10 @@ AWS_AZ=$(curl -s http://169.254.169.254/2014-02-25/meta-data/placement/availabil
 AWS_REGION=$(echo $AWS_AZ | sed 's/[a-z]$//')
 PRIVATE_FQDN=$(curl -s http://169.254.169.254/2016-09-02/meta-data/local-hostname)
 PUBLIC_FQDN=$(curl -s http://169.254.169.254/2016-09-02/meta-data/public-hostname)
-echo "Identified that $PUBLIC_FQDN instance ID $INSTANCE_ID, in AZ $AWS_AZ (region $AWS_REGION)"
+echo ; echo "Identified that we are $PRIVATE_FQDN / $PUBLIC_FQDN, instance ID $INSTANCE_ID, in AZ $AWS_AZ (region $AWS_REGION)"
 
 # Install mailutils, including some Postfix configuration
+echo ; echo 'Installing and configuring Postfix'
 echo "postfix postfix/main_mailer_type select Internet Site" | debconf-set-selections
 echo "postfix postfix/mailname string ${PUBLIC_FQDN}" | debconf-set-selections
 DEBIAN_FRONTEND=noninteractive apt-get install -y mailutils
@@ -28,6 +30,7 @@ service postfix restart
 
 
 # Get other info from the config file written by user-data
+echo ; echo 'Getting bootstrap data from shell config file'
 . /etc/kathputli-bootstrap.sh
 DNS_ZONE_NAME_NO_END_DOT=$(echo ${DNS_ZONE_NAME} | sed 's/\.$//')
 
@@ -39,7 +42,7 @@ mkdir /mnt/efs
 
 # Check if we already have the mount defined
 grep -q /mnt/efs /etc/fstab || echo "${EFS_ID}.efs.${AWS_REGION}.amazonaws.com:/ /mnt/efs nfs nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 1" >> /etc/fstab
-echo "Mounting EFS..."
+echo ; echo "Mounting EFS..."
 mount /mnt/efs
 
 # If we don't have one already, make a directory to hold config status
@@ -56,7 +59,7 @@ DNS_NAMESERVERS=$(aws route53 get-hosted-zone --id ${DNS_ZONE_ID} | jq .Delegati
 echo "DNS domain $DNS_ZONE_NAME has zone ID $DNS_ZONE_ID"
 DNS_DELEGATION_DONE=$(dig +recurse +short ${DNS_ZONE_NAME} soa | grep amazon | wc -l | sed 's/ //g')
 if [ ${DNS_DELEGATION_DONE} -eq '0' ]; then
-    echo 'DNS Delegation incomplete!'
+    echo ; echo 'DNS Delegation incomplete!'
     cat <<EOF > /tmp/dns_mail.txt
 Hello!
 
@@ -80,7 +83,7 @@ EOF
     mailx --return-address="root@${PUBLIC_FQDN}" --subject='DNS Delegation Required' "${ADMIN_EMAIL}" < /tmp/dns_mail.txt
     rm /tmp/dns_mail.txt
 else
-    echo 'DNS delegation looks good'
+    echo ; echo 'DNS delegation looks good'
 fi
 
 #
@@ -88,6 +91,7 @@ fi
 #
 
 if [ $(aws route53 list-resource-record-sets --hosted-zone-id ${DNS_ZONE_ID} --no-paginate --query "ResourceRecordSets[?Name == 'bootstrap.${DNS_ZONE_NAME}']" | wc -l | sed 's/ //') -ne '1' ]; then
+    echo ; echo 'We need to clean up old bootstrap CNAME entries'
 # TODO: Remove any existing DNS entries
     cat > /tmp/bootstrap_cleanup.json <<EOS
 {
@@ -111,6 +115,7 @@ EOS
 #aws route53 change-resource-record-sets --hosted-zone-id ${DNS_ZONE_ID} --change-batch file:///tmp/bootstrap_cleanup.json
 rm /tmp/bootstrap_clenaup.json
 fi
+echo ; echo "Adding CNAME for bootstrap.${DNS_ZONE_NAME} --> ${PUBLIC_FQDN}"
 cat > /tmp/bootstrap_cname_route53.json <<EOS
 {
 "Comment": "Add SES verification token to domain",
@@ -140,8 +145,9 @@ rm /tmp/bootstrap_cname_route53.json
 # SES configuration involves getting a verification token for the domain, and
 # then adding it to Route53.
 configure_ses () {
-    SES_TOKEN_QUOTED_QUOTES=$(echo ${SES_TOKEN} | sed 's/"/\\"/g')
     SES_TOKEN=$(aws ses verify-domain-identity --region ${AWS_REGION} --domain ${DNS_ZONE_NAME_NO_END_DOT} | jq .VerificationToken)
+    SES_TOKEN_QUOTED_QUOTES=$(echo ${SES_TOKEN} | sed 's/"/\\"/g')
+    echo ; echo "Adding TXT record ${SES_TOKEN} to ${DNS_ZONE_NAME} for SES"
     cat > /tmp/ses_route53.json <<EOS
 {
 "Comment": "Add SES verification token to domain",
@@ -169,11 +175,12 @@ if [ ${SES_VALIDATION_DONE} -eq '0' ]; then
     echo 'Doing SES configuration...'
     configure_ses
     sleep 30
-    echo 'SES configuration complete!'
+    echo ; echo 'SES configuration complete!'
 else
-    echo 'SES configuration already active'
+    echo ; echo 'SES configuration already active'
 fi
 
 # All done!
+echo ; echo 'Bootstrap complete!'
 touch /tmp/bootstrap-complete
 exit 0
