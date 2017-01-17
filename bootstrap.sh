@@ -190,6 +190,7 @@ echo 'Running Terraform bootstrap script'
 ./terraform.sh
 
 # All done!
-echo ; echo 'Bootstrap complete!'
+echo ; echo 'Bootstrap complete!  System will now reboot to start services.'
 touch /tmp/bootstrap-complete
+shutdown -r now
 exit 0
