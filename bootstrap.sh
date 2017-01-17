@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Send output to a log file
-exec 1>/tmp/bootstrap.log 2>&1
+exec 1>/var/log/bootstrap.log 2>&1
 
 # Install packages
 # * awscli is for lots of stuff
@@ -191,6 +191,6 @@ echo 'Running Terraform bootstrap script'
 
 # All done!
 echo ; echo 'Bootstrap complete!  System will now reboot to start services.'
-touch /tmp/bootstrap-complete
+touch /var/log/bootstrap-complete
 shutdown -r now
 exit 0
