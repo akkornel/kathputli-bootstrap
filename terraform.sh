@@ -140,8 +140,11 @@ if [ ! -d ${SERVICE_GIT_TAG} ]; then
     echo ; echo "Worker directory /mnt/efs/terrawork/worker/${SERVICE_GIT_TAG} missing.  Fetching and installing!"
     REBOOT_NEEDED=1
 
+    echo ; echo "Cloning worker repo ${SERVICE_GIT_REPO}"
     git clone ${SERVICE_GIT_REPO} ${SERVICE_GIT_TAG}
     cd ${SERVICE_GIT_TAG}
+
+    echo ; echo "Verifying and checking out tag ${SERVICE_GIT_TAG}"
     git tag -v ${SERVICE_GIT_TAG}
     if [ $? -ne 0 ]; then
         echo ; echo "WARNING!  Tag ${SERVICE_GIT_TAG} failed to verify.  Exiting now."
