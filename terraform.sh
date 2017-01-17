@@ -92,7 +92,7 @@ fi
 
 if [ $GPG_VERIFICATION_NEEDED -eq 1 ]; then
     echo ; echo "Verifying ${TERRAFORM_SHA_FILE}"
-    gpg ${TERRAFORM_SHA_SIG} ${TERRAFORM_SHA_FILE}
+    gpg --verify ${TERRAFORM_SHA_SIG} ${TERRAFORM_SHA_FILE}
     if [ $? -ne 0 ]; then
         echo 'WARNING!  GPG signature failed verification!  Exiting now.'
         exit 1
