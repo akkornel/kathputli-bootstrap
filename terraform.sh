@@ -28,13 +28,13 @@ echo "Fetching/Updating keys ${TERRAFORM_GPG_KEY} and ${SERVICE_GPG_KEY}"
 gpg --keyserver keys.gnupg.net --recv-key ${TERRAFORM_GPG_KEY} ${SERVICE_GPG_KEY}
 
 # Mark keys as trusted
-grep "trusted-key ${TERRAFORM_GPG_KEY}" ~/.gnupg/gpg.conf
+grep "trusted-key ${TERRAFORM_GPG_KEY}" ~/.gnupg/gpg.conf >/dev/null 2>&1
 if [ $? -ne 0 ]; then
     echo "Marking key ${TERRAFORM_GPG_KEY} as trusted"
     echo "trusted-key ${TERRAFORM_GPG_KEY}" >> ~/.gnupg/gpg.conf
     gpg --update-trustdb
 fi
-grep "trusted-key ${SERVICE_GPG_KEY}" ~/.gnupg/gpg.conf
+grep "trusted-key ${SERVICE_GPG_KEY}" ~/.gnupg/gpg.conf >/dev/null 2>&1
 if [ $? -ne 0 ]; then
     echo "Marking key ${SERVICE_GPG_KEY} as trusted"
     echo "trusted-key ${SERVICE_GPG_KEY}" >> ~/.gnupg/gpg.conf
