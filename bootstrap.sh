@@ -9,8 +9,9 @@ exec 1>/tmp/bootstrap.log 2>&1
 # * jq is for processing awscli output
 # * mailutils is for sending email before SES is working (install later)
 # * nfs-common is to mount EFS
+# * unzip is to extract Terraform
 echo 'Installing packages for bootstrap'
-DEBIAN_FRONTEND=noninteractive apt-get install -y awscli dnsutils jq nfs-common
+DEBIAN_FRONTEND=noninteractive apt-get install -y awscli dnsutils jq nfs-common unzip
 
 # Get basic instance ID and location
 INSTANCE_ID=$(curl -s http://169.254.169.254/2014-02-25/meta-data/instance-id)
@@ -179,6 +180,14 @@ if [ ${SES_VALIDATION_DONE} -eq '0' ]; then
 else
     echo ; echo 'SES configuration already active'
 fi
+
+#
+# TERRAFORM
+#
+
+# Terraform's bootstrap is in a separate script.
+echo 'Running Terraform bootstrap script'
+./terraform.sh
 
 # All done!
 echo ; echo 'Bootstrap complete!'
