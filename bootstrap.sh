@@ -97,7 +97,7 @@ if [ $(aws route53 list-resource-record-sets --hosted-zone-id ${DNS_ZONE_ID} --n
 # TODO: Remove any existing DNS entries
     cat > /tmp/bootstrap_cleanup.json <<EOS
 {
-"Comment": "Add SES verification token to domain",
+"Comment": "Clean up old bootstrap record",
 "Changes": [
 {
   "Action": "DELETE",
@@ -120,7 +120,7 @@ fi
 echo ; echo "Adding CNAME for bootstrap.${DNS_ZONE_NAME} --> ${PUBLIC_FQDN}"
 cat > /tmp/bootstrap_cname_route53.json <<EOS
 {
-"Comment": "Add SES verification token to domain",
+"Comment": "Add bootstrap record to domain",
 "Changes": [
 {
   "Action": "CREATE",
