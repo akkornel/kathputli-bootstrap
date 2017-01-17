@@ -143,7 +143,7 @@ if [ ! -d ${SERVICE_GIT_TAG} ]; then
     git clone ${SERVICE_GIT_REPO} ${SERVICE_GIT_TAG}
     cd ${SERVICE_GIT_TAG}
     git tag -v ${SERVICE_GIT_TAG}
-    if [ $? -ne 1 ]; then
+    if [ $? -ne 0 ]; then
         echo "WARNING!  Tag ${SERVICE_GIT_TAG} failed to verify.  Exiting now."
         exit 1
     fi
