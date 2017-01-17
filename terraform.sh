@@ -8,10 +8,10 @@
 # 2) We create a systemd unit file for the Terraform worker, 
 
 # Send output to a log file
-echo ; echo 'Starting Terraform Bootstrap'
+echo 'Starting Terraform Bootstrap'
 
 # Load config
-echo 'Loading config'
+echo ; echo 'Loading config'
 . terraform_config.sh
 
 GPG_VERIFICATION_NEEDED=0
@@ -24,19 +24,19 @@ REBOOT_NEEDED=0
 #
 
 # Fetch the GPG keys
-echo "Fetching/Updating keys ${TERRAFORM_GPG_KEY} and ${SERVICE_GPG_KEY}"
+echo ; echo "Fetching/Updating keys ${TERRAFORM_GPG_KEY} and ${SERVICE_GPG_KEY}"
 gpg --keyserver keys.gnupg.net --recv-key ${TERRAFORM_GPG_KEY} ${SERVICE_GPG_KEY}
 
 # Mark keys as trusted
 grep "trusted-key ${TERRAFORM_GPG_KEY}" ~/.gnupg/gpg.conf >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-    echo "Marking key ${TERRAFORM_GPG_KEY} as trusted"
+    echo ; echo "Marking key ${TERRAFORM_GPG_KEY} as trusted"
     echo "trusted-key ${TERRAFORM_GPG_KEY}" >> ~/.gnupg/gpg.conf
     gpg --update-trustdb
 fi
 grep "trusted-key ${SERVICE_GPG_KEY}" ~/.gnupg/gpg.conf >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-    echo "Marking key ${SERVICE_GPG_KEY} as trusted"
+    echo ; echo "Marking key ${SERVICE_GPG_KEY} as trusted"
     echo "trusted-key ${SERVICE_GPG_KEY}" >> ~/.gnupg/gpg.conf
     gpg --update-trustdb
 fi
@@ -47,17 +47,17 @@ fi
 
 # Make directories to hold Terraform stuff
 if [ ! -d /mnt/efs/terraform ]; then
-    echo 'Creating /mnt/efs/terraform'
+    echo ; echo 'Creating /mnt/efs/terraform'
     mkdir /mnt/efs/terraform
 fi
 if [ ! -d /mnt/efs/terraform/app ]; then
-    echo 'Creating /mnt/efs/terraform/app'
+    echo ; echo 'Creating /mnt/efs/terraform/app'
     mkdir /mnt/efs/terraform/app
 fi
 
 # Make directories to hold the worker
 if [ ! -d /mnt/efs/terraform/worker ]; then
-    echo 'Creating /mnt/efs/terraform/worker'
+    echo ; echo 'Creating /mnt/efs/terraform/worker'
     mkdir /mnt/efs/terraform/worker
 fi
 
@@ -71,27 +71,27 @@ fi
 cd /mnt/efs/terraform/app
 
 if [ ! -d $TERRAFORM_VERSION ]; then
-    echo "Creating ${TERRAFORM_VERSION}"
+    echo ; echo "Creating /mnt/efs/terraform/app/${TERRAFORM_VERSION}"
     mkdir ${TERRAFORM_VERSION}
 fi
 cd ${TERRAFORM_VERSION}
 
 if [ ! -f $TERRAFORM_SHA_FILE ]; then
-    echo "Fetching ${TERRAFORM_SHA_FILE}"
+    echo ; echo "Fetching ${TERRAFORM_URL_BASE}${TERRAFORM_SHA_FILE}"
     GPG_VERIFICATION_NEEDED=1
     SHA_VERIFICATION_NEEDED=1
     curl -O "${TERRAFORM_URL_BASE}${TERRAFORM_SHA_FILE}"
 fi
 
 if [ ! -f $TERRAFORM_SHA_SIG ]; then
-    echo "Fetching ${TERRAFORM_SHA_SIG}"
+    echo ; echo "Fetching ${TERRAFORM_URL_BASE}${TERRAFORM_SHA_SIG}"
     GPG_VERIFICATION_NEEDED=1
     SHA_VERIFICATION_NEEDED=1
     curl -O "${TERRAFORM_URL_BASE}${TERRAFORM_SHA_SIG}"
 fi
 
 if [ $GPG_VERIFICATION_NEEDED -eq 1 ]; then
-    echo "Verifying ${TERRAFORM_SHA_FILE}"
+    echo ; echo "Verifying ${TERRAFORM_SHA_FILE}"
     gpg ${TERRAFORM_SHA_SIG}
     if [ $? -ne 0 ]; then
         echo 'WARNING!  GPG signature failed verification!  Exiting now.'
@@ -100,13 +100,13 @@ if [ $GPG_VERIFICATION_NEEDED -eq 1 ]; then
 fi
 
 if [ ! -f $TERRAFORM_ZIP ]; then
-    echo "Fetching ${TERRAFORM_ZIP}"
+    echo ; echo "Fetching ${TERRAFORM_ZIP}"
     SHA_VERIFICATION_NEEDED=1
     curl -O "${TERRAFORM_URL_BASE}${TERRAFORM_ZIP}"
 fi
 
 if [ $SHA_VERIFICATION_NEEDED -eq 1 ]; then
-    echo "Verifying ${TERRAFORM_ZIP}"
+    echo ; echo "Verifying ${TERRAFORM_ZIP}"
     sha256sum --check --ignore-missing ${TERRAFORM_SHA_FILE}
     if [ $? -ne 0 ]; then
         echo 'WARNING!  SHA check failed!  Exiting now.'
@@ -123,7 +123,7 @@ SYMLINK_PATH=$(readlink /mnt/efs/terraform/app/terraform)
 
 if [ "${SYMLINK_PATH}" != "/mnt/efs/terraform/app/${TERRAFORM_VERSION}/terraform" ]; then
     REBOOT_NEEDED=1
-    echo "Updating symlink /mnt/efs/terraform/app/terraform to point to /mnt/efs/terraform/app/${TERRAFORM_VERSION}/terraform"
+    echo ; echo "Updating symlink /mnt/efs/terraform/app/terraform to point to /mnt/efs/terraform/app/${TERRAFORM_VERSION}/terraform"
     systemctl stop kathputli-terraform
     rm -f /mnt/efs/terraform/app/terraform
     ln -s /mnt/efs/terraform/app/${TERRAFORM_VERSION}/terraform /mnt/efs/terraform/app/terraform
@@ -137,14 +137,14 @@ fi
 cd /mnt/efs/terraform/worker
 
 if [ ! -d ${SERVICE_GIT_TAG} ]; then
-    echo 'Worker directory /mnt/efs/terrawork/worker/${SERVICE_GIT_TAG} missing.  Fetching and installing!'
+    echo ; echo "Worker directory /mnt/efs/terrawork/worker/${SERVICE_GIT_TAG} missing.  Fetching and installing!"
     REBOOT_NEEDED=1
 
     git clone ${SERVICE_GIT_REPO} ${SERVICE_GIT_TAG}
     cd ${SERVICE_GIT_TAG}
     git tag -v ${SERVICE_GIT_TAG}
     if [ $? -ne 0 ]; then
-        echo "WARNING!  Tag ${SERVICE_GIT_TAG} failed to verify.  Exiting now."
+        echo ; echo "WARNING!  Tag ${SERVICE_GIT_TAG} failed to verify.  Exiting now."
         exit 1
     fi
     git checkout ${SERVICE_GIT_TAG}
@@ -160,7 +160,7 @@ fi
 # Check if we need to create the systemd service file
 if [ ! -f /lib/systemd/system/kathputli-terraform.service ]; then
     REBOOT_NEEDED=1
-    echo 'Creating and enabling systemd unit file for kathputli-terraform'
+    echo ; echo 'Creating and enabling systemd unit file for kathputli-terraform'
     cat - >/lib/systemd/system/kathputli-terraform.service <<EOF
 [Unit]
 Description=Kathputli Terraform image builder
