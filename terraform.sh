@@ -172,6 +172,9 @@ Requires=network.target
 RequiresMountsFor=/mnt/efs
 After=network.target
 
+[Install]
+WantedBy=multi-user.target
+
 [Service]
 Type=simple
 ExecStart=/usr/bin/kathputli-terraform
