@@ -12,7 +12,7 @@ echo ; echo 'Starting Terraform Bootstrap'
 
 # Load config
 echo 'Loading config'
-. bootstrap_terraform_config.sh
+. terraform_config.sh
 
 GPG_VERIFICATION_NEEDED=0
 SHA_VERIFICATION_NEEDED=0
