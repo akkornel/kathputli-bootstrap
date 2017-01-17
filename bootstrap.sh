@@ -42,6 +42,7 @@ DNS_ZONE_NAME_NO_END_DOT=$(echo ${DNS_ZONE_NAME} | sed 's/\.$//')
 mkdir /mnt/efs
 
 # Check if we already have the mount defined
+# TODO: Only mount if not already mounted
 grep -q /mnt/efs /etc/fstab || echo "${EFS_ID}.efs.${AWS_REGION}.amazonaws.com:/ /mnt/efs nfs nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 1" >> /etc/fstab
 echo ; echo "Mounting EFS..."
 mount /mnt/efs
